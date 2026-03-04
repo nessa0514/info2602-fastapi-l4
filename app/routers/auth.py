@@ -53,3 +53,20 @@ def signup_user(user_data: UserCreate, db:SessionDep):
                 detail="Username or email already exists",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+# excercise 2
+@category_router.post("/category", response_model=CategoryItem)
+def create_category(
+    category_data: CategoryItem,
+    db: SessionDep,
+    user: AuthDep
+):
+    category = Category(
+        text=category_data.text,
+        user_id=user.id
+    )
+    db.add(category)
+    db.commit()
+    db.refresh(category)
+
+    return category

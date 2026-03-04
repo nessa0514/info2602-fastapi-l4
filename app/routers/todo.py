@@ -60,21 +60,39 @@ def update_todo(id:int, db:SessionDep, user:AuthDep, todo_data:TodoUpdate):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="An error occurred while updating an item",
         )
+    
+@category_router.get("/category/{cat_id}/todos", response_model=list[TodoResponse])
+def get_todos_for_category(
+    cat_id: int,
+    db: SessionDep,
+    user: AuthDep
+):
+    category = db.get(Category, cat_id)
 
-@todo_router.delete('/todo/{id}', status_code=status.HTTP_200_OK)
-def update_todo(id:int, db:SessionDep, user:AuthDep):
+    if not category or category.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
-    todo = db.exec(select(Todo).where(Todo.id==id, Todo.user_id==user.id)).one_or_none()
-    if not todo:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unauthorized",
-        )
-    try:
-        db.delete(todo)
+    return category.todos
+
+ # exercise 2   
+@category_router.post("/todo/{todo_id}/category/{cat_id}")
+def add_category_to_todo(
+    todo_id: int,
+    cat_id: int,
+    db: SessionDep,
+    user: AuthDep
+):
+    todo = db.get(Todo, todo_id)
+    category = db.get(Category, cat_id)
+
+    if not todo or todo.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if not category or category.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if category not in todo.categories:
+        todo.categories.append(category)
         db.commit()
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="An error occurred while deleting an item",
-        )
+
+    return {"message": "Category added to todo"}
